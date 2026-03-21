@@ -36,13 +36,24 @@ const AiQuizGenerator = () => {
             }
 
             // Do not set Content-Type manually - axios sets multipart/form-data with boundary
-            const res = await axios.post(`${API_URL}/api/ai/generate-quiz`, formData);
+            const res = await axios.post(`http://localhost:8080/api/ai/generate-quiz`, formData, {
+                // Add a timeout (e.g., 2 minutes) because AI generation can be slow
+                timeout: 60000, 
+                headers: {
+                    'Accept': 'application/json',
+                }
+            });
 
             setQuiz(res.data);
+            console.log(res.data);
             setUserAnswers(new Array(res.data.questions.length).fill(null));
             setCurrentQuestion(0);
         } catch (err) {
-            const message = err.response?.data?.message || err.message || 'Failed to generate quiz.';
+            const message = err.response?.data?.message
+                || (err.code === 'ERR_NETWORK'
+                    ? 'Network error: CORS issue or the AI generation took too long. Check backend CORS config.'
+                    : err.message)
+                || 'Failed to generate quiz.';
             setError(message);
         } finally {
             setLoading(false);
@@ -183,7 +194,7 @@ const AiQuizGenerator = () => {
                                 accept="application/pdf,text/plain"
                                 onChange={(e) => setFile(e.target.files[0] || null)}
                             />
-                            <button id="inputbtn">Upload file</button>
+                            <button id="inputbtn" type="button">Upload file</button>
                         </div>
 
                         {error && <p className="error">{error}</p>}
